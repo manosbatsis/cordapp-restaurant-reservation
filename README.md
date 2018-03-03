@@ -33,7 +33,19 @@ And change directories to the newly cloned repo:
 
      cd cordapp-restaurant-reservation
 
-## Building the CorDapp template:
+## Main Components
+
+- ReservationState, defined in [StatesAndContracts.kt](cordapp-contracts-states/src/main/kotlin/com/template/StatesAndContracts.kt), 
+represents reservation state on the ledger
+- ReservationFlow, defined in [App.kt](cordapp-restaurant-reservation/cordapp/src/main/kotlin/com/template/App.kt), 
+orchestrates the process of agreeing on the creation of an on-ledger reservation
+- ReservationFlowResponder, , defined in [App.kt](cordapp-restaurant-reservation/cordapp/src/main/kotlin/com/template/App.kt),
+provides the restaurant's response to ReservationFlow
+- ReservationContract, defined in [StatesAndContracts.kt](cordapp-contracts-states/src/main/kotlin/com/template/StatesAndContracts.kt), 
+imposes reservation rules e.g. command, transaction or signer constraints 
+
+
+## Building the App:
 
 **Unix:** 
 
@@ -59,11 +71,11 @@ run the nodes with:
 
 **Unix:**
 
-	./runnodes --log-to-console --logging-level=DEBUG
+	build/nodes/runnodes --log-to-console --logging-level=DEBUG
 
 **Windows:**
 
-	runnodes.bat --log-to-console --logging-level=DEBUG
+	build/nodes/runnodes.bat --log-to-console --logging-level=DEBUG
 
 You should now have three Corda nodes running on your machine serving 
 the template.

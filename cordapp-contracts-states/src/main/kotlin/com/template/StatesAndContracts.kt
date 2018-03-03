@@ -1,5 +1,6 @@
 package com.template
 
+import net.corda.core.contracts.*
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
@@ -10,18 +11,29 @@ import net.corda.core.transactions.LedgerTransaction
 // * Contract Code *
 // *****************
 // This is used to identify our contract when building a transaction
-val TEMPLATE_CONTRACT_ID = "com.template.TemplateContract"
+val RESERVATION_CONTRACT_ID = "com.template.ReservationContract"
 
-open class TemplateContract : Contract {
-    // A transaction is considered valid if the verify() function of the contract of each of the transaction's input
-    // and output states does not throw an exception.
+class ReservationContract : Contract {
+    // Our Create command.
+    class Create : CommandData
+
     override fun verify(tx: LedgerTransaction) {
-        // Verification logic goes here.
-    }
+        val command = tx.commands.requireSingleCommand<Create>()
 
-    // Used to indicate the transaction's intent.
-    interface Commands : CommandData {
-        class Action : Commands
+        requireThat {
+            // Constraints on the shape of the transaction.
+            "No inputs should be consumed when issuing a reservation." using (tx.inputs.isEmpty())
+            "There should be one output state of type ReservationState." using (tx.outputs.size == 1)
+
+            // Reservation-specific constraints.
+            val out = tx.outputsOfType<ReservationState>().single()
+            "The number of persons must be greater than zero." using (out.persons > 0)
+
+            // Constraints on the signers.
+            "There must be two signers." using (command.signers.toSet().size == 2)
+
+            // Other checks: available capacity etc.
+        }
     }
 }
 

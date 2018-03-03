@@ -1,13 +1,16 @@
 package com.template
 
 import co.paralleluniverse.fibers.Suspendable
-import net.corda.core.flows.*
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.requireThat
+import net.corda.core.transactions.SignedTransaction
+import net.corda.core.contracts.StateAndContract
+import net.corda.core.flows.*
 import net.corda.core.identity.Party
-import net.corda.core.transactions.TransactionBuilder
-import net.corda.core.utilities.ProgressTracker
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.serialization.SerializationWhitelist
+import net.corda.core.transactions.TransactionBuilder
+import net.corda.core.utilities.ProgressTracker
 import net.corda.webserver.services.WebServerPluginRegistry
 import java.util.function.Function
 import javax.ws.rs.GET
@@ -33,13 +36,33 @@ class TemplateApi(val rpcOps: CordaRPCOps) {
 // *********
 // * Flows *
 // *********
+/**
+ * Restaurant's response to ReservationFlow
+ */
+@InitiatedBy(ReservationFlow::class)
+class ReservationFlowResponder(val otherPartySession: FlowSession) : FlowLogic<Unit>() {
+    @Suspendable
+    override fun call() {
+        val signTransactionFlow = object : SignTransactionFlow(otherPartySession, SignTransactionFlow.tracker()) {
+            override fun checkTransaction(stx: SignedTransaction) = requireThat {
+                val output = stx.tx.outputs.single().data
+                "This must be a Reservation transaction." using (output is ReservationState)
+                val Reservation = output as ReservationState
+                "The Reservation persons number cannot be higher than the total seats capacity." using (Reservation.persons < 120)
+            }
+        }
+
+        subFlow(signTransactionFlow)
+    }
+}
+
 @InitiatingFlow
 @StartableByRPC
 // Constructor parameters:
 // - personsValue, which is the value of the number of seats/persons for the table being reserved
 // - guestParty, the guest making the reservation (the node running the flow is the restaurant side)
-class ReservationFlow(val personsValue: Int,
-                      val guestParty: Party) : FlowLogic<Unit>() {
+class ReservationFlow(private val personsValue: Int,
+                      private val guestParty: Party) : FlowLogic<Unit>() {
 
     /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */
     override val progressTracker = ProgressTracker()
@@ -53,20 +76,31 @@ class ReservationFlow(val personsValue: Int,
         // and the services that they offer.
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
+        // We create a transaction builder.
+        val txBuilder = TransactionBuilder(notary = notary)
+
         // We create the transaction components.
         val outputState = ReservationState(personsValue, ourIdentity, guestParty)
-        val cmd = Command(TemplateContract.Commands.Action(), ourIdentity.owningKey)
+        val outputContractAndState = StateAndContract(outputState, RESERVATION_CONTRACT_ID)
+        val cmd = Command(ReservationContract.Create(), listOf(ourIdentity.owningKey, guestParty.owningKey))
 
-        // We create a transaction builder and add the components.
-        val txBuilder = TransactionBuilder(notary = notary)
-                .addOutputState(outputState, TEMPLATE_CONTRACT_ID)
-                .addCommand(cmd)
+        // We add the items to the builder.
+        txBuilder.withItems(outputContractAndState, cmd)
 
-        // We sign the transaction.
+        // Verifying the transaction.
+        txBuilder.verify(serviceHub)
+
+        // Signing the transaction.
         val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
-        // We finalise the transaction.
-        subFlow(FinalityFlow(signedTx))
+        // Creating a session with the other party.
+        val otherpartySession = initiateFlow(guestParty)
+
+        // Obtaining the counterparty's signature.
+        val fullySignedTx = subFlow(CollectSignaturesFlow(signedTx, listOf(otherpartySession), CollectSignaturesFlow.tracker()))
+
+        // Finalising the transaction.
+        subFlow(FinalityFlow(fullySignedTx))
     }
 }
 
