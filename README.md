@@ -6,6 +6,17 @@ This is merely an attempt to get acquainted with the platform based on the
 [CorDapp Kotlin template](https://github.com/corda/cordapp-template-kotlin), 
 a stubbed-out CorDapp used to quickly bootstrap CorDapp projects.
 
+- [Pre-Requisites](#pre-requisites)
+- [Getting Set Up](#getting-set-up)
+- [Main Components](#main-components)
+- [Building the App:](#building-the-app)
+- [Running the Nodes](#running-the-nodes)
+- [Issuing a reservation](#issuing-a-reservation)
+- [Interacting with the CorDapp via HTTP](#interacting-with-the-cordapp-via-http)
+- [Using the Example RPC Client](#using-the-example-rpc-client)
+- [Running the Nodes Across Multiple Machines](#running-the-nodes-across-multiple-machines)
+- [Further reading](#further-reading)
+
 
 ## Pre-Requisites
 
