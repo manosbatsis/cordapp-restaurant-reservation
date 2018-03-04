@@ -12,6 +12,8 @@ import net.corda.core.serialization.SerializationWhitelist
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import net.corda.webserver.services.WebServerPluginRegistry
+import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.util.function.Function
 import javax.ws.rs.GET
 import javax.ws.rs.Path
@@ -62,6 +64,7 @@ class ReservationFlowResponder(val otherPartySession: FlowSession) : FlowLogic<U
 // - personsValue, which is the value of the number of seats/persons for the table being reserved
 // - guestParty, the guest making the reservation (the node running the flow is the restaurant side)
 class ReservationFlow(private val personsValue: Int,
+                      private val dateValue: ZonedDateTime,
                       private val guestParty: Party) : FlowLogic<Unit>() {
 
     /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */
@@ -80,7 +83,7 @@ class ReservationFlow(private val personsValue: Int,
         val txBuilder = TransactionBuilder(notary = notary)
 
         // We create the transaction components.
-        val outputState = ReservationState(personsValue, ourIdentity, guestParty)
+        val outputState = ReservationState(personsValue, dateValue, ourIdentity, guestParty)
         val outputContractAndState = StateAndContract(outputState, RESERVATION_CONTRACT_ID)
         val cmd = Command(ReservationContract.Create(), listOf(ourIdentity.owningKey, guestParty.owningKey))
 

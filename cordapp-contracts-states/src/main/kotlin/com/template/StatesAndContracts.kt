@@ -6,6 +6,7 @@ import net.corda.core.contracts.Contract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
+import java.time.ZonedDateTime
 
 // *****************
 // * Contract Code *
@@ -28,6 +29,7 @@ class ReservationContract : Contract {
             // Reservation-specific constraints.
             val out = tx.outputsOfType<ReservationState>().single()
             "The number of persons must be greater than zero." using (out.persons > 0)
+            "The date must be in the future." using (out.date.isAfter(ZonedDateTime.now(out.date.zone)))
 
             // Constraints on the signers.
             "There must be two signers." using (command.signers.toSet().size == 2)
@@ -43,6 +45,7 @@ class ReservationContract : Contract {
 // Records the shared fact that a guest has reserved a table to a restaurant,
 // suitable to seat the specified number of persons
 data class ReservationState(val persons: Int,
+                            val date: ZonedDateTime,
                             val restaurant: Party,
                             val guest: Party) : ContractState {
     override val participants get() = listOf(restaurant, guest)
